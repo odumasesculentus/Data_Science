@@ -342,3 +342,51 @@ for i in range(20):
                        voting='hard', weights=[i,j,k]).fit(X_train, y_train)
                 combine_score.append(ensemble.score(X_test, y_test))
 print('The accuracy for Bagging Classifier, QDA and Decision Tree is:',round(max(combine_score),3))
+
+
+
+# We can also get the most importance features for determing the result of the loan eligibility. This can basically be included when deploying the models but it is done here for clarity purpose. This is not straight-forward since we are using the pipepline. 
+
+# In[169]:
+
+
+#to obtain the feature importance, 
+
+theclassifiers = classifiers_ = [
+    ("AdaBoost", AdaBoostClassifier()),
+    ("Decision Tree", DecisionTreeClassifier(max_depth=3)),
+    ("Random Forest",RandomForestClassifier(n_jobs=2, random_state=1))
+    ] 
+#NB: these classifiers are considered because they are only once amongst the classfiers considered that run with the 
+# "feature_importances_" code line
+
+for n,clif in theclassifiers:
+    clif = Pipeline([('POLY', poly),('CLF',clif)])
+    clif.fit(X_train, y_train)
+    feature_names = clif.named_steps["POLY"].get_feature_names()
+#put the name of the column heads in a list
+    column_head = loan_train.columns
+#obtain the coefficients of the features
+    coefs = clif.named_steps["CLF"].feature_importances_.flatten()
+
+# Zip coefficients and names together and make a DataFrame
+    zipped = zip(feature_names, coefs)
+    df = pd.DataFrame(zipped, columns=["feature", "value"])
+
+#since we need the names of the column heads as the tick labels
+    for i in range(len(column_head)):
+        df["feature"][i] = column_head[i]
+    
+#Make a bar chart of the coefficients
+    fig, ax = plt.subplots(1, 1, figsize=(12, 6))
+    sns.barplot(x=df["feature"][0:len(column_head)],
+                y=df["value"][0:len(column_head)])
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=90, fontsize=20)
+    ax.set_title(n, fontsize=25)
+    ax.set_ylabel("Coefficients", fontsize=22)
+    ax.set_xlabel("Feature Name", fontsize=22)
+    ax.grid(True, color = "g")
+    plt.show()
+
+
+# The scores suggest that the important features, which are features with non-zero coefficients, are dependent on the model deployed. However, the three plots above show that the Loan_Status appear to be generally "the most" important feature. Basically, all other features with a zero coefficient are essentially removed them from the model.
